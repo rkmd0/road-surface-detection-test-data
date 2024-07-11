@@ -1,5 +1,3 @@
-// updated basic_reading
-
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
 #include <Wire.h>
@@ -7,6 +5,9 @@
 #include <SD.h>
 #include "FS.h"
 #include <ESP32Time.h>
+#include <WiFi.h>
+#include <NTPClient.h>
+#include <WiFiUdp.h>
 
 #include "Freenove_WS2812_Lib_for_ESP32.h"
 
@@ -14,16 +15,23 @@
 Freenove_ESP32_WS2812 led = Freenove_ESP32_WS2812(1, LED_PIN, 0, TYPE_GRB);
 
 Adafruit_MPU6050 mpu;
-ESP32Time rtc;
 int prevAccTime;
+
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP);
+ESP32Time rtc;
+
+
+const char* ssid = "erki";
+const char* password = "sensebox";
 
 void setLED(uint8_t r,uint8_t g,uint8_t b) {
     led.setLedColorData(0, r, g, b);
     led.show();
 }
 
-
-#define BUFFER_SIZE 1000
+// overflowing buffer
+#define BUFFER_SIZE 500
 struct SensorData {
   float accX;
   float accY;
@@ -94,7 +102,19 @@ void setup() {
   mpu.setGyroRange(MPU6050_RANGE_250_DEG); // 
   mpu.setFilterBandwidth(MPU6050_BAND_260_HZ);
 
-  rtc.setTime(0);  // set time to 0 (unix epoch)
+
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.println("not connected");
+  }
+
+  //rtc.setTime(0);  // set time to 0 (unix epoch)
+
+  timeClient.begin();
+  timeClient.update();
+  rtc.setTime(timeClient.getEpochTime());
+  WiFi.disconnect();
 
   filename = "/data_" + rtc.getTime("%F_%H-%M-%S") + ".csv";
   Data = SD.open(filename, FILE_WRITE);
