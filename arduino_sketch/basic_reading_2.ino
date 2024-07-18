@@ -1,5 +1,4 @@
 #include <Adafruit_MPU6050.h>
-#include <Adafruit_Sensor.h>
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
@@ -9,10 +8,11 @@
 #include <NTPClient.h>
 #include <WiFiUdp.h>
 
-#include "Freenove_WS2812_Lib_for_ESP32.h"
+#include <Adafruit_NeoPixel.h>
 
-#define LED_PIN 1
-Freenove_ESP32_WS2812 led = Freenove_ESP32_WS2812(1, LED_PIN, 0, TYPE_GRB);
+//#define LED_PIN 1
+//Freenove_ESP32_WS2812 led = Freenove_ESP32_WS2812(1, LED_PIN, 0, TYPE_GRB);
+Adafruit_NeoPixel rgb_led_1 = Adafruit_NeoPixel(1, 1, NEO_GRB + NEO_KHZ800);
 
 Adafruit_MPU6050 mpu;
 int prevAccTime;
@@ -22,16 +22,16 @@ NTPClient timeClient(ntpUDP);
 ESP32Time rtc;
 
 
-const char* ssid = "erki";
-const char* password = "sensebox";
+const char* ssid = "ssid";
+const char* password = "passwort";
 
 void setLED(uint8_t r,uint8_t g,uint8_t b) {
-    led.setLedColorData(0, r, g, b);
-    led.show();
+  rgb_led_1.setPixelColor(0, rgb_led_1.Color(r, g, b));
+  rgb_led_1.show();
 }
 
-// overflowing buffer
-#define BUFFER_SIZE 500
+
+#define BUFFER_SIZE 1000
 struct SensorData {
   float accX;
   float accY;
@@ -77,8 +77,8 @@ void saveDataToSD() {
 void setup() {
   Serial.begin(115200);
 
-  led.begin();
-  led.setBrightness(1);
+  rgb_led_1.begin();
+  rgb_led_1.setBrightness(10);
   //setLED(255,0,0);
 
   pinMode(SD_ENABLE, OUTPUT);
@@ -129,6 +129,10 @@ void setup() {
   lastSaveTime = millis();
   prevAccTime = millis();
 
+
+  // add confirmation that everything is set up
+  setLED(0, 255, 0);
+
 }
 
 void loop() {
@@ -150,14 +154,14 @@ void loop() {
   // alle 10 sekunden -> speichern dauert 0.5sekunden
   if (bufferIndex >= BUFFER_SIZE || millis() - lastSaveTime >= 10000) {  // write every 10 seconds
     saveDataToSD();
+    //Serial.println(timestamp);
     lastSaveTime = millis();
   }
   // warte bis 10 milli vorbei sind
   if((millis() - prevAccTime) < 10) {
     delay(10-(millis() - prevAccTime));
-    setLED(255,0,0);
   }
   
-  Serial.println("acce: " + String(millis() - prevAccTime));
+  //Serial.println("acce: " + String(millis() - prevAccTime));
   prevAccTime = millis();
 }
